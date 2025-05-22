@@ -4,11 +4,13 @@ use serde::{Deserialize, Serialize};
 use crate::{auth::jwt::generate_token, models::user::User};
 use bcrypt::verify;
 use crate::auth::jwt::validate_token;
+use crate::models::role::Role;
 
 #[derive(Deserialize)]
 struct AuthRequest {
     username: String,
     password: String,
+    role: Role,
 }
 
 #[derive(Serialize)]
@@ -31,7 +33,7 @@ async fn signup(
         return HttpResponse::BadRequest().body("Username and password cannot be empty");
     }
 
-    let new_user = User::new(payload.username.clone(), payload.password.clone());
+    let new_user = User::new(payload.username.clone(), payload.password.clone(),  payload.role.clone());
     let users = db.collection::<Document>("users");
 
     let doc = mongodb::bson::to_document(&new_user).unwrap();
@@ -58,8 +60,9 @@ async fn login(
             let db_hash = user_doc.get_str("password").unwrap_or("");
             if verify(&payload.password, db_hash).unwrap_or(false) {
                 let id = user_doc.get_object_id("_id").unwrap().to_string();
-                let access_token = generate_token(&id, 15);
-                let refresh_token_value = generate_token(&id, 60);
+                let role = user_doc.get_str("role").unwrap_or("enduser");
+                let access_token = generate_token(&id, role,15);
+                let refresh_token_value = generate_token(&id, role,60);
                 HttpResponse::Ok().json(TokenResponse { access_token,  refresh_token: refresh_token_value, })
             } else {
                 HttpResponse::Unauthorized().body("Invalid credentials")
@@ -76,7 +79,7 @@ async fn refresh_token(
 ) -> HttpResponse {
     match validate_token(&payload.refresh_token) {
         Ok(claims) => {
-            let new_access_token = generate_token(&claims.sub, 15);
+            let new_access_token = generate_token(&claims.sub, &claims.role,15);
             HttpResponse::Ok().json(serde_json::json!({
                 "access_token": new_access_token
             }))

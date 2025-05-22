@@ -6,10 +6,11 @@ use crate::config::get_env;
 #[derive(Serialize, Deserialize)]
 pub struct Claims {
     pub sub: String,
+    pub role: String,
     pub exp: usize,
 }
 
-pub fn generate_token(user_id: &str, minutes: i64) -> String {
+pub fn generate_token(user_id: &str, role: &str, minutes: i64) -> String {
     let exp = Utc::now()
         .checked_add_signed(Duration::minutes(minutes))
         .unwrap()
@@ -17,6 +18,7 @@ pub fn generate_token(user_id: &str, minutes: i64) -> String {
 
     let claims = Claims {
         sub: user_id.to_owned(),
+        role: role.to_string(),
         exp,
     };
 

@@ -20,7 +20,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(web::Data::new(db.clone()))
             .configure(routes::auth::init)
-            .configure(routes::profile::init) // Now accessible at /me directly
+            .configure(routes::profile::init)
+            .configure(routes::protected::init)// Now accessible at /me directly
             .wrap(Logger::default())
     })
         .bind("127.0.0.1:8081")?
